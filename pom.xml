@@ -9,6 +9,16 @@
   <name>app1</name>
 
   <build>
-    <finalName>app1</finalName>
-  </build>
+  <finalName>app1</finalName>
+
+  <plugins>
+    <plugin>
+      <artifactId>maven-war-plugin</artifactId>
+      <version>3.3.2</version>
+      <configuration>
+        <failOnMissingWebXml>false</failOnMissingWebXml>
+      </configuration>
+    </plugin>
+  </plugins>
+</build>
 </project>
