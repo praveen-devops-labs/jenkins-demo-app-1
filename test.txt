@@ -1,1 +1,1 @@
-Testing demo-1
+Testing demo-app-1
