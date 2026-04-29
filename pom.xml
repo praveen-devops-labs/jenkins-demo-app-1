@@ -1,0 +1,14 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>demo</groupId>
+  <artifactId>app1</artifactId>
+  <version>1.0</version>
+  <packaging>war</packaging>
+
+  <name>app1</name>
+
+  <build>
+    <finalName>app1</finalName>
+  </build>
+</project>
