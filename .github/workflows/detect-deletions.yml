@@ -1,0 +1,28 @@
+name: Detect Code Deletions
+
+on:
+  push:
+    branches:
+      - dev-login        # watch your source/protected branch
+      - qa-testing
+
+jobs:
+  detect-deletions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # needed to post PR comments
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2     # need HEAD and HEAD~1 to diff
+
+      - name: Detect deletions and notify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          chmod +x .github/scripts/detect_deletions.sh
+          .github/scripts/detect_deletions.sh
