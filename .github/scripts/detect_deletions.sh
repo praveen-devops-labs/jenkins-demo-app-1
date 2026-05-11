@@ -1,19 +1,23 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 AUTHOR=$(git log -1 --format="%an <%ae>")
-COMMIT_SHA=$(git rev-parse --short HEAD)
+COMMIT_SHA=$(git rev-parse HEAD)
+COMMIT_SHORT=$(git rev-parse --short HEAD)
 COMMIT_MSG=$(git log -1 --format="%s")
 TIMESTAMP=$(git log -1 --format="%ci")
+BRANCH_NAME="${GITHUB_REF_NAME}"
 
-# Get only deleted lines (starts with -) from actual code files
-# Excludes lock files, changelogs, etc.
+echo "Scanning commit for deleted lines..."
+
+# Detect deleted code lines only
 DELETED=$(git diff HEAD~1..HEAD \
   -- '*.js' '*.ts' '*.py' '*.java' '*.go' '*.rb' '*.cs' \
   | grep '^-' \
-  | grep -v '^---' \       # exclude file path lines
-  | grep -v '^-[[:space:]]*$' \   # exclude blank line deletions
-  | grep -v '^-[[:space:]]*//' \  # exclude comment deletions (optional)
+  | grep -v '^---' \
+  | grep -v '^-[[:space:]]*$' \
+  | grep -v '^-[[:space:]]*//' \
+  || true
 )
 
 DELETED_COUNT=$(echo "$DELETED" | grep -c '^-' || true)
@@ -25,86 +29,127 @@ fi
 
 echo "⚠️ $DELETED_COUNT deleted lines detected"
 
-# ---- Post to Google Chat ----
+# Limit output size
+DELETED_PREVIEW=$(echo "$DELETED" | head -20 | sed 's/"/\\"/g')
+
+COMMIT_URL="https://github.com/$GITHUB_REPOSITORY/commit/$COMMIT_SHA"
+
+# --------------------------------------------------------
+# Google Chat Notification
+# --------------------------------------------------------
+
 if [ -n "$GCHAT_WEBHOOK" ]; then
-  curl -s -X POST "$GCHAT_WEBHOOK" \
-    -H 'Content-Type: application/json' \
-    -d "{
-      \"cardsV2\": [{
-        \"cardId\": \"deletion-alert\",
-        \"card\": {
-          \"header\": {
-            \"title\": \"🚨 Code Deletion Detected\",
-            \"subtitle\": \"Automated alert from GitHub Actions\",
-            \"imageUrl\": \"https://www.gstatic.com/images/icons/material/system/2x/warning_red_24dp.png\",
-            \"imageType\": \"CIRCLE\"
-          },
-          \"sections\": [{
-            \"widgets\": [
+
+  echo "Sending Google Chat notification..."
+
+  cat <<EOF > payload.json
+{
+  "cardsV2": [
+    {
+      "cardId": "deletion-alert",
+      "card": {
+        "header": {
+          "title": "🚨 Code Deletion Detected",
+          "subtitle": "Automated GitHub Actions Alert"
+        },
+        "sections": [
+          {
+            "widgets": [
               {
-                \"decoratedText\": {
-                  \"topLabel\": \"Author\",
-                  \"text\": \"$AUTHOR\"
+                "decoratedText": {
+                  "topLabel": "Repository",
+                  "text": "$GITHUB_REPOSITORY"
                 }
               },
               {
-                \"decoratedText\": {
-                  \"topLabel\": \"Commit\",
-                  \"text\": \"$COMMIT_SHA — $COMMIT_MSG\"
+                "decoratedText": {
+                  "topLabel": "Branch",
+                  "text": "$BRANCH_NAME"
                 }
               },
               {
-                \"decoratedText\": {
-                  \"topLabel\": \"Lines Deleted\",
-                  \"text\": \"$DELETED_COUNT lines removed\"
+                "decoratedText": {
+                  "topLabel": "Author",
+                  "text": "$AUTHOR"
                 }
               },
               {
-                \"decoratedText\": {
-                  \"topLabel\": \"Branch\",
-                  \"text\": \"$GITHUB_REF_NAME\"
+                "decoratedText": {
+                  "topLabel": "Commit",
+                  "text": "$COMMIT_SHORT - $COMMIT_MSG"
                 }
               },
               {
-                \"decoratedText\": {
-                  \"topLabel\": \"Timestamp\",
-                  \"text\": \"$TIMESTAMP\"
+                "decoratedText": {
+                  "topLabel": "Deleted Lines",
+                  "text": "$DELETED_COUNT lines removed"
+                }
+              },
+              {
+                "textParagraph": {
+                  "text": "<b>Deleted Code Preview:</b><br><font color=\"#d93025\"><pre>$DELETED_PREVIEW</pre></font>"
                 }
               }
             ]
           },
           {
-            \"widgets\": [{
-              \"buttonList\": {
-                \"buttons\": [{
-                  \"text\": \"View Commit\",
-                  \"onClick\": {
-                    \"openLink\": {
-                      \"url\": \"https://github.com/$GITHUB_REPOSITORY/commit/$COMMIT_SHA\"
+            "widgets": [
+              {
+                "buttonList": {
+                  "buttons": [
+                    {
+                      "text": "VIEW COMMIT",
+                      "onClick": {
+                        "openLink": {
+                          "url": "$COMMIT_URL"
+                        }
+                      }
                     }
-                  }
-                }]
+                  ]
+                }
               }
-            }]
-          }]
-        }
-      }]
-    }"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+EOF
+
+  curl -s -X POST "$GCHAT_WEBHOOK" \
+    -H "Content-Type: application/json" \
+    -d @payload.json
+
 fi
-# ---- Post PR comment (if this commit is tied to an open PR) ----
-PR_NUMBER=$(gh pr list --state open --json number,headRefName \
-  --jq '.[] | select(.headRefName == "'"$(git branch --show-current)"'") | .number' \
+
+# --------------------------------------------------------
+# PR Comment
+# --------------------------------------------------------
+
+CURRENT_BRANCH=$(git branch --show-current)
+
+PR_NUMBER=$(gh pr list \
+  --state open \
+  --json number,headRefName \
+  --jq '.[] | select(.headRefName == "'"$CURRENT_BRANCH"'") | .number' \
   2>/dev/null || true)
 
 if [ -n "$PR_NUMBER" ]; then
-  COMMENT_BODY="### ⚠️ Code Deletion Detected
+
+  echo "Posting PR comment..."
+
+  COMMENT_BODY=$(cat <<EOF
+### ⚠️ Code Deletion Detected
 
 **Author:** $AUTHOR
-**Commit:** \`$COMMIT_SHA\`
-**Deleted lines:** $DELETED_COUNT
+
+**Commit:** \`$COMMIT_SHORT\`
+
+**Deleted Lines:** $DELETED_COUNT
 
 <details>
-<summary>View deleted lines</summary>
+<summary>Deleted Code Preview</summary>
 
 \`\`\`diff
 $(echo "$DELETED" | head -50)
@@ -112,7 +157,10 @@ $(echo "$DELETED" | head -50)
 
 </details>
 
-> This is an automated alert. Please confirm this deletion was intentional."
+> Please verify this deletion is intentional.
+EOF
+)
 
   gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
+
 fi
