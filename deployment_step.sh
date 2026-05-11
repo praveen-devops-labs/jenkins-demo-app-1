@@ -197,27 +197,7 @@ sleep 2
 #################
 chat_notification () 
 {
-if [ $FC_VERSION_NOTIFY = "yes" ]; then
-    if [ $CDN = 'gcp' ]; then
-       echo "Deployment and Files copy is done in $ENVIRONMENT ENV gchat"
-       curl -sH 'Content-Type: application/json' -X POST $GCHAT_URL --data '{"text": "'"*Hi QA Team*,\nDeployment and Files copy is Done,\nFiles reflected *$FILE_VERSION* in *$ENVIRONMENT* ENV, \nGCP CDN: https://gcp-cdns.profitokrs.com/$FILE_VERSION/app/ng/src/assets/css/bootstrap.css \n*Please Start Verify*"'", "thread" : { "threadKey": "THREAD-'$(date +%s)'"}}' >> /dev/null
-	elif [ $CDN = 'gcp-aws' ]; then
-        echo "Deployment and Files copy is done in $ENVIRONMENT ENV gchat"
-        curl -sH 'Content-Type: application/json' -X POST $GCHAT_URL --data '{"text": "'"*Hi QA Team*,\nDeployment and Files copy is Done,\nFiles reflected *$FILE_VERSION* in *$ENVIRONMENT* ENV, \nAWS CDN: https://appc.profitokrs.com/$FILE_VERSION/app/ng/src/assets/css/bootstrap.css \nGCP CDN: https://gcp-cdns.profitokrs.com/$FILE_VERSION/app/ng/src/assets/css/bootstrap.css \n*Please Start Verify*"'", "thread" : { "threadKey": "THREAD-'$(date +%s)'"}}' >> /dev/null
-    fi
-elif [ $FC_VERSION_NOTIFY = "no" ]; then
-    if [ $REQUIRED = 'Build_And_Files_Copy' ]; then
-       echo "Deployment is Done in $ENVIRONMENT Env,Going to do Files Generation in $ENVIRONMENT Env gchat"
-       
-       curl -s -H 'Content-Type: application/json' -X POST $GCHAT_URL --data '{"text": "'"*Hi QA Team*,\nDeployment is Done in *$ENVIRONMENT* Env,\nGoing to Initiate Files Generation in *$ENVIRONMENT* Env "'", "thread" : { "threadKey": "THREAD-'$(date +%s)'"}}' >> /dev/null
-    elif [ $REQUIRED = 'Build' ]; then
-        echo "Deployment copy is done in $ENVIRONMENT ENV gchat"
-       curl -sH 'Content-Type: application/json' -X POST $GCHAT_URL --data '{"text": "'"*Hi QA Team*,\nDeployment is Done in *$ENVIRONMENT* ENV, \n*Please Start Verify*"'", "thread" : { "threadKey": "THREAD-'$(date +%s)'"}}' >> /dev/null
-    fi
-else
-    "ERROR: Invalid FC_VER_NOTIFY"
-fi
-}
+
 # Simulate some work
 sleep 2
 echo "Docker Deployment completed successfully"
