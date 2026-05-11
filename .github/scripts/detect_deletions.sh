@@ -12,7 +12,7 @@ echo "Scanning commit for deleted lines..."
 
 # Detect deleted code lines only
 DELETED=$(git diff HEAD~1..HEAD \
-  -- '*.js' '*.ts' '*.py' '*.java' '*.go' '*.rb' '*.cs' \
+  -- '*.js' '*.ts' '*.py' '*.java' '*.go' '*.rb' '*.cs' '*.sh' \
   | grep '^-' \
   | grep -v '^---' \
   | grep -v '^-[[:space:]]*$' \
