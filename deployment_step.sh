@@ -14,19 +14,6 @@ FC_VERSION_NOTIFY=$7
 REQUIRED=$8
 ##########################
 if [[ $ENVIRONMENT = "UAT" ]]; then
-GCHAT_URL='https://chat.googleapis.com/v1/spaces/AAAAkRPquRE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=8P_S4Exea74xKAFnKua2-q7Tnaawpkk7hwhESi8L4f0%3D&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD'
-	        ###sathish chat#####
-#     GCHAT_URL="https://chat.googleapis.com/v1/spaces/AAAAi3EHuzc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=0DGw9aqpUU_gLD7edRTR_PKDdLwS3f6ZXZuwQtg4H3E%3D&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"
-else
-#	GCHAT_URL='https://chat.googleapis.com/v1/spaces/AAAA2ii6fn8/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=WA7z-fCdxStQJpkHETZf-FXYHf4ugwtLQT48ktSgAjc%3D&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD'
-      GCHAT_URL="https://chat.googleapis.com/v1/spaces/AAAA2ii6fn8/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=WA7z-fCdxStQJpkHETZf-FXYHf4ugwtLQT48ktSgAjc&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"
-
-fi
-
-send_alert() {
-	curl -sH 'Content-Type: application/json' -X POST $GCHAT_URL --data '{"text": "*Docker Image Deployment Failed for Profit Node*", "thread" : { "threadKey": "THREAD-'$(date +%s)'"}}' >> /dev/null
-}
-
 trap 'send_alert; exit 1' ERR
 
 APP_DEPLOY()
