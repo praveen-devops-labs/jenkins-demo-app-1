@@ -200,6 +200,23 @@ chat_notification ()
 
 # Simulate some work
 sleep 2
+######################################
+
+if [ $ENVIRONMENT = "STAG" ]; then
+    echo "STAG Environment"
+    CDN='gcp'
+chat_notification 
+
+elif [ $ENVIRONMENT = "UAT" ]; then
+    echo "UAT Environment"
+    CDN='gcp-aws'
+    chat_notification
+else
+    echo "ERROR: Invalid ENV_NAME"
+    exit 1
+fi
+##################################
+
 echo "Docker Deployment completed successfully"
 apps-fileview.texmex_20260501.02_p0
 Deployment_steps.txt
