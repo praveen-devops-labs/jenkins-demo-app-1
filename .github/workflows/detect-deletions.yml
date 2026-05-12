@@ -3,36 +3,26 @@ name: Detect Code Deletions
 on:
   push:
     branches:
-      - qa-testing
       - dev-login
-
+      - qa-testing
   pull_request:
     branches:
       - dev-login
-      - qa-testing
-    types:
-      - opened
-      - synchronize
-      - reopened
 
 jobs:
-  detect-deletions:
+  delete-detection:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      pull-requests: write
-
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
-      - name: Run deletion detector
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GCHAT_WEBHOOK: ${{ secrets.GCHAT_WEBHOOK }}
+      - name: Git Difference
+        run: git diff --name-only
+      
+      - name: Print GitHub Context
         run: |
-          chmod +x .github/scripts/detect_deletions.sh
-          .github/scripts/detect_deletions.sh
+          echo "Base Ref: ${{github.base_ref}}"
+          echo "Head Ref: ${{github.head_ref}}"
+
+
+
