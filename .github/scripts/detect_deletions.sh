@@ -1,5 +1,8 @@
 #!/bin/bash
+
 set -eo pipefail
+
+echo "Starting deletion scan..."
 
 AUTHOR=$(git log -1 --format="%an <%ae>")
 COMMIT_SHA=$(git rev-parse HEAD)
@@ -8,11 +11,14 @@ COMMIT_MSG=$(git log -1 --format="%s")
 TIMESTAMP=$(git log -1 --format="%ci")
 BRANCH_NAME="${GITHUB_REF_NAME}"
 
-echo "Scanning commit for deleted lines..."
+COMMIT_URL="https://github.com/$GITHUB_REPOSITORY/commit/$COMMIT_SHA"
 
-# Detect deleted code lines only
+# --------------------------------------------------------
+# Detect meaningful deleted lines
+# --------------------------------------------------------
+
 DELETED=$(git diff HEAD~1..HEAD \
-  -- '*.js' '*.ts' '*.py' '*.java' '*.go' '*.rb' '*.cs' '*.sh' \
+  -- '*.java' '*.js' '*.ts' '*.py' '*.go' '*.rb' '*.cs' \
   | grep '^-' \
   | grep -v '^---' \
   | grep -v '^-[[:space:]]*$' \
@@ -23,16 +29,19 @@ DELETED=$(git diff HEAD~1..HEAD \
 DELETED_COUNT=$(echo "$DELETED" | grep -c '^-' || true)
 
 if [ "$DELETED_COUNT" -eq 0 ]; then
-  echo "No meaningful code deletions found."
+  echo "No meaningful deletions found."
   exit 0
 fi
 
 echo "⚠️ $DELETED_COUNT deleted lines detected"
 
-# Limit output size
-DELETED_PREVIEW=$(echo "$DELETED" | head -20 | sed 's/"/\\"/g')
+# --------------------------------------------------------
+# Extract affected files
+# --------------------------------------------------------
 
-COMMIT_URL="https://github.com/$GITHUB_REPOSITORY/commit/$COMMIT_SHA"
+FILES_CHANGED=$(git diff --name-only HEAD~1..HEAD \
+  -- '*.java' '*.js' '*.ts' '*.py' '*.go' '*.rb' '*.cs' \
+  | sed 's/^/- /')
 
 # --------------------------------------------------------
 # Google Chat Notification
@@ -87,7 +96,7 @@ if [ -n "$GCHAT_WEBHOOK" ]; then
               },
               {
                 "textParagraph": {
-                  "text": "<b>Deleted Code Preview:</b><br><font color=\"#d93025\"><pre>$DELETED_PREVIEW</pre></font>"
+                  "text": "<b>Affected Files:</b><br><pre>$FILES_CHANGED</pre>"
                 }
               }
             ]
@@ -127,40 +136,36 @@ fi
 # PR Comment
 # --------------------------------------------------------
 
-CURRENT_BRANCH=$(git branch --show-current)
+PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH" 2>/dev/null || true)
 
-PR_NUMBER=$(gh pr list \
-  --state open \
-  --json number,headRefName \
-  --jq '.[] | select(.headRefName == "'"$CURRENT_BRANCH"'") | .number' \
-  2>/dev/null || true)
+if [ "$PR_NUMBER" != "null" ] && [ -n "$PR_NUMBER" ]; then
 
-if [ -n "$PR_NUMBER" ]; then
-
-  echo "Posting PR comment..."
+  echo "Posting PR comment to PR #$PR_NUMBER"
 
   COMMENT_BODY=$(cat <<EOF
 ### ⚠️ Code Deletion Detected
 
-**Author:** $AUTHOR
+| Field | Value |
+|---|---|
+| Author | $AUTHOR |
+| Branch | $BRANCH_NAME |
+| Commit | \`$COMMIT_SHORT\` |
+| Deleted Lines | $DELETED_COUNT |
 
-**Commit:** \`$COMMIT_SHORT\`
+#### Affected Files
 
-**Deleted Lines:** $DELETED_COUNT
-
-<details>
-<summary>Deleted Code Preview</summary>
-
-\`\`\`diff
-$(echo "$DELETED" | head -50)
+\`\`\`
+$FILES_CHANGED
 \`\`\`
 
-</details>
+[View Commit]($COMMIT_URL)
 
-> Please verify this deletion is intentional.
+> Please verify that these deletions are intentional.
 EOF
 )
 
   gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
 
 fi
+
+echo "Deletion scan completed."

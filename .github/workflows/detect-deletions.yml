@@ -3,8 +3,17 @@ name: Detect Code Deletions
 on:
   push:
     branches:
+      - qa-testing
+      - dev-login
+
+  pull_request:
+    branches:
       - dev-login
       - qa-testing
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 jobs:
   detect-deletions:
@@ -15,16 +24,12 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Install GitHub CLI
-        run: |
-          gh --version
-
-      - name: Detect deletions and notify
+      - name: Run deletion detector
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GCHAT_WEBHOOK: ${{ secrets.GCHAT_WEBHOOK }}
