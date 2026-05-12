@@ -1,14 +1,9 @@
 name: Detect Code Deletions
 
-on:
-  push:
-    branches:
-      - dev-login
-      - qa-testing
+on:  
   pull_request:
     branches:
-      - dev-login
-
+      - main
 jobs:
   delete-detection:
     runs-on: ubuntu-latest
