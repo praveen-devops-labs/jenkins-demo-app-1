@@ -28,11 +28,15 @@ FILE_PATTERNS=(
   '*.sh'
 )
 
+echo "Fetching base branch..."
+
+git fetch origin "${GITHUB_BASE_REF}:${GITHUB_BASE_REF}"
+
 # ------------------------------------------------------------
 # DIFF ANALYSIS
 # ------------------------------------------------------------
 
-DELETED_LINES=$(git diff origin/${GITHUB_BASE_REF}...HEAD \
+DELETED_LINES=$(git diff ${GITHUB_BASE_REF}...HEAD \
   -- "${FILE_PATTERNS[@]}" \
   | grep '^-' \
   | grep -v '^---' \
@@ -41,7 +45,7 @@ DELETED_LINES=$(git diff origin/${GITHUB_BASE_REF}...HEAD \
   || true
 )
 
-ADDED_LINES=$(git diff origin/${GITHUB_BASE_REF}...HEAD \
+ADDED_LINES=$(git diff ${GITHUB_BASE_REF}...HEAD \
   -- "${FILE_PATTERNS[@]}" \
   | grep '^+' \
   | grep -v '^+++' \
@@ -52,7 +56,7 @@ ADDED_LINES=$(git diff origin/${GITHUB_BASE_REF}...HEAD \
 DELETED_COUNT=$(echo "$DELETED_LINES" | grep -c '^-' || true)
 ADDED_COUNT=$(echo "$ADDED_LINES" | grep -c '^+' || true)
 
-FILES_CHANGED=$(git diff --name-only origin/${GITHUB_BASE_REF}...HEAD \
+FILES_CHANGED=$(git diff --name-only ${GITHUB_BASE_REF}...HEAD \
   -- "${FILE_PATTERNS[@]}" \
   || true
 )
