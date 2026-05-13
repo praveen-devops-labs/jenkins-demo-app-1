@@ -61,22 +61,6 @@ public class OrderProcessingService {
         return total;
     }
 
-    public void printAllOrders() {
-
-        System.out.println("Printing all orders...");
-
-        for (Order order : orders) {
-
-            System.out.println(
-                "Order ID: " + order.getId()
-                    + " | Item: " + order.getItemName()
-                    + " | Quantity: " + order.getQuantity()
-                    + " | Price: " + order.getPrice()
-                    + " | Created: " + order.getCreatedTime()
-            );
-        }
-    }
-
        static class Order {
 
         private String id;
