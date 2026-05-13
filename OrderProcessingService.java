@@ -24,7 +24,48 @@ public class OrderProcessingService {
         service.processOrders();
     }
 
-    
+    public void createOrder(String itemName, int quantity, double price) {
+        Order order = new Order();
+        order.setId(UUID.randomUUID().toString());
+        order.setItemName(itemName);
+        order.setQuantity(quantity);
+        order.setPrice(price);
+        order.setCreatedTime(LocalDateTime.now());
+
+        orders.add(order);
+
+        System.out.println("Order created for item: " + itemName);
+    }
+
+    public void processOrders() {
+        System.out.println("Processing orders...");
+
+        for (Order order : orders) {
+
+            if (validateOrder(order)) {
+
+                double totalPrice = calculateOrderPrice(order);
+
+                System.out.println(
+                    "Processed Order: "
+                        + order.getItemName()
+                        + " | Quantity: "
+                        + order.getQuantity()
+                        + " | Total Price: "
+                        + totalPrice
+                );
+
+                generateInvoice(order);
+
+            } else {
+                System.out.println(
+                    "Invalid order found: "
+                        + order.getId()
+                );
+            }
+        }
+    }
+
     public boolean validateOrder(Order order) {
 
         if (order == null) {
@@ -61,7 +102,25 @@ public class OrderProcessingService {
         return total;
     }
 
-       static class Order {
+    public void generateInvoice(Order order) {
+
+        System.out.println("Generating invoice...");
+
+        String invoice = ""
+            + "--------------------------\n"
+            + "INVOICE\n"
+            + "--------------------------\n"
+            + "Item: " + order.getItemName() + "\n"
+            + "Quantity: " + order.getQuantity() + "\n"
+            + "Unit Price: " + order.getPrice() + "\n"
+            + "Total: " + calculateOrderPrice(order) + "\n"
+            + "Generated Time: " + LocalDateTime.now() + "\n"
+            + "--------------------------";
+
+        System.out.println(invoice);
+    }
+
+    static class Order {
 
         private String id;
         private String itemName;
