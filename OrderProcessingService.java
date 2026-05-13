@@ -77,25 +77,7 @@ public class OrderProcessingService {
         }
     }
 
-    public void generateInvoice(Order order) {
-
-        System.out.println("Generating invoice...");
-
-        String invoice = ""
-            + "--------------------------\n"
-            + "INVOICE\n"
-            + "--------------------------\n"
-            + "Item: " + order.getItemName() + "\n"
-            + "Quantity: " + order.getQuantity() + "\n"
-            + "Unit Price: " + order.getPrice() + "\n"
-            + "Total: " + calculateOrderPrice(order) + "\n"
-            + "Generated Time: " + LocalDateTime.now() + "\n"
-            + "--------------------------";
-
-        System.out.println(invoice);
-    }
-
-    static class Order {
+       static class Order {
 
         private String id;
         private String itemName;

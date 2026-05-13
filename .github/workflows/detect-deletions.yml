@@ -1,23 +1,27 @@
-name: Detect Code Deletions
+name: Detect Code Risk
 
-on:  
+on:
+  push:
+    branches:
+      - qa-testing
+      - dev-login
+
   pull_request:
     branches:
       - main
 jobs:
-  delete-detection:
+  detect-deletions:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-      - name: Git Difference
-        run: git diff --name-only
-      
-      - name: Print GitHub Context
+      - name: Run deletion detector
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GCHAT_WEBHOOK: ${{ secrets.GCHAT_WEBHOOK }}
         run: |
-          echo "Base Ref: ${{github.base_ref}}"
-          echo "Head Ref: ${{github.head_ref}}"
-
-
-
+          chmod +x .github/scripts/detect_deletions.sh
+          .github/scripts/detect_deletions.sh
