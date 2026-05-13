@@ -1,14 +1,10 @@
 name: Detect Code Risk
 
-on:
-  push:
-    branches:
-      - qa-testing
-      - dev-login
-
+on:  
   pull_request:
     branches:
-      - main
+      - dev-login
+      - qa-testing
 jobs:
   detect-deletions:
     runs-on: ubuntu-latest
