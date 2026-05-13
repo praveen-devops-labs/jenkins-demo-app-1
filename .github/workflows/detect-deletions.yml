@@ -1,11 +1,6 @@
-name: Detect Code Deletions
+name: Detect Code Risk
 
 on:
-  push:
-    branches:
-      - qa-testing
-      - dev-login
-
   pull_request:
     branches:
       - dev-login
@@ -16,7 +11,7 @@ on:
       - reopened
 
 jobs:
-  detect-deletions:
+  detect-risk:
     runs-on: ubuntu-latest
 
     permissions:
@@ -24,15 +19,15 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Run deletion detector
+      - name: Run Risk Detection
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GCHAT_WEBHOOK: ${{ secrets.GCHAT_WEBHOOK }}
         run: |
-          chmod +x .github/scripts/detect_deletions.sh
-          .github/scripts/detect_deletions.sh
+          chmod +x .github/scripts/detect_risk.sh
+          .github/scripts/detect_risk.sh

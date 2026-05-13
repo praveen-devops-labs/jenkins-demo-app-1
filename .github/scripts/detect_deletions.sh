@@ -2,23 +2,38 @@
 
 set -eo pipefail
 
-echo "Starting deletion scan..."
+echo "Starting PR risk analysis..."
 
 AUTHOR=$(git log -1 --format="%an <%ae>")
 COMMIT_SHA=$(git rev-parse HEAD)
 COMMIT_SHORT=$(git rev-parse --short HEAD)
 COMMIT_MSG=$(git log -1 --format="%s")
-TIMESTAMP=$(git log -1 --format="%ci")
-BRANCH_NAME="${GITHUB_REF_NAME}"
+BRANCH_NAME="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
 
 COMMIT_URL="https://github.com/$GITHUB_REPOSITORY/commit/$COMMIT_SHA"
+PR_URL="https://github.com/$GITHUB_REPOSITORY/pull"
 
-# --------------------------------------------------------
-# Detect meaningful deleted lines
-# --------------------------------------------------------
+# ------------------------------------------------------------
+# FILE TYPES TO MONITOR
+# ------------------------------------------------------------
 
-DELETED=$(git diff HEAD~1..HEAD \
-  -- '*.java' '*.js' '*.ts' '*.py' '*.go' '*.rb' '*.cs' \
+FILE_PATTERNS=(
+  '*.java'
+  '*.js'
+  '*.ts'
+  '*.py'
+  '*.go'
+  '*.rb'
+  '*.cs'
+  '*.sh'
+)
+
+# ------------------------------------------------------------
+# DIFF ANALYSIS
+# ------------------------------------------------------------
+
+DELETED_LINES=$(git diff origin/${GITHUB_BASE_REF}...HEAD \
+  -- "${FILE_PATTERNS[@]}" \
   | grep '^-' \
   | grep -v '^---' \
   | grep -v '^-[[:space:]]*$' \
@@ -26,40 +41,99 @@ DELETED=$(git diff HEAD~1..HEAD \
   || true
 )
 
-DELETED_COUNT=$(echo "$DELETED" | grep -c '^-' || true)
+ADDED_LINES=$(git diff origin/${GITHUB_BASE_REF}...HEAD \
+  -- "${FILE_PATTERNS[@]}" \
+  | grep '^+' \
+  | grep -v '^+++' \
+  | grep -v '^[[:space:]]*$' \
+  || true
+)
 
-if [ "$DELETED_COUNT" -eq 0 ]; then
-  echo "No meaningful deletions found."
-  exit 0
+DELETED_COUNT=$(echo "$DELETED_LINES" | grep -c '^-' || true)
+ADDED_COUNT=$(echo "$ADDED_LINES" | grep -c '^+' || true)
+
+FILES_CHANGED=$(git diff --name-only origin/${GITHUB_BASE_REF}...HEAD \
+  -- "${FILE_PATTERNS[@]}" \
+  || true
+)
+
+# ------------------------------------------------------------
+# RISK ENGINE
+# ------------------------------------------------------------
+
+RISK_SCORE=0
+SEVERITY="MINOR"
+FAIL_PR=false
+REASONS=()
+
+# ---- deletion volume ----
+
+if [ "$DELETED_COUNT" -gt 10 ]; then
+  RISK_SCORE=$((RISK_SCORE + 3))
+  REASONS+=("More than 10 deleted lines")
 fi
 
-echo "⚠️ $DELETED_COUNT deleted lines detected"
+if [ "$DELETED_COUNT" -gt 50 ]; then
+  RISK_SCORE=$((RISK_SCORE + 5))
+  REASONS+=("More than 50 deleted lines")
+fi
 
-# --------------------------------------------------------
-# Extract affected files
-# --------------------------------------------------------
+# ---- additions replacing deletions ----
 
-FILES_CHANGED=$(git diff --name-only HEAD~1..HEAD \
-  -- '*.java' '*.js' '*.ts' '*.py' '*.go' '*.rb' '*.cs' \
-  | sed 's/^/- /')
+if [ "$ADDED_COUNT" -gt "$DELETED_COUNT" ]; then
+  RISK_SCORE=$((RISK_SCORE - 1))
+  REASONS+=("Code replacement detected")
+fi
 
-# --------------------------------------------------------
-# Google Chat Notification
-# --------------------------------------------------------
+# ---- critical paths ----
+
+if echo "$FILES_CHANGED" | grep -E 'auth|security|payment|prod|infra'; then
+  RISK_SCORE=$((RISK_SCORE + 10))
+  REASONS+=("Critical module modified")
+fi
+
+# ------------------------------------------------------------
+# DETERMINE SEVERITY
+# ------------------------------------------------------------
+
+if [ "$RISK_SCORE" -ge 10 ]; then
+  SEVERITY="CRITICAL"
+  FAIL_PR=true
+
+elif [ "$RISK_SCORE" -ge 4 ]; then
+  SEVERITY="MAJOR"
+  FAIL_PR=true
+
+else
+  SEVERITY="MINOR"
+fi
+
+echo "Risk Score: $RISK_SCORE"
+echo "Severity: $SEVERITY"
+
+# ------------------------------------------------------------
+# FORMAT FILE LIST
+# ------------------------------------------------------------
+
+FILES_MARKDOWN=$(echo "$FILES_CHANGED" | sed 's/^/- /')
+
+REASON_TEXT=$(printf '%s\n' "${REASONS[@]}" | sed 's/^/- /')
+
+# ------------------------------------------------------------
+# GOOGLE CHAT ALERT
+# ------------------------------------------------------------
 
 if [ -n "$GCHAT_WEBHOOK" ]; then
 
-  echo "Sending Google Chat notification..."
-
-  cat <<EOF > payload.json
+cat <<EOF > payload.json
 {
   "cardsV2": [
     {
-      "cardId": "deletion-alert",
+      "cardId": "risk-alert",
       "card": {
         "header": {
-          "title": "🚨 Code Deletion Detected",
-          "subtitle": "Automated GitHub Actions Alert"
+          "title": "🚨 PR Risk Analysis",
+          "subtitle": "$SEVERITY severity detected"
         },
         "sections": [
           {
@@ -84,19 +158,25 @@ if [ -n "$GCHAT_WEBHOOK" ]; then
               },
               {
                 "decoratedText": {
-                  "topLabel": "Commit",
-                  "text": "$COMMIT_SHORT - $COMMIT_MSG"
+                  "topLabel": "Severity",
+                  "text": "$SEVERITY"
                 }
               },
               {
                 "decoratedText": {
                   "topLabel": "Deleted Lines",
-                  "text": "$DELETED_COUNT lines removed"
+                  "text": "$DELETED_COUNT"
+                }
+              },
+              {
+                "decoratedText": {
+                  "topLabel": "Added Lines",
+                  "text": "$ADDED_COUNT"
                 }
               },
               {
                 "textParagraph": {
-                  "text": "<b>Affected Files:</b><br><pre>$FILES_CHANGED</pre>"
+                  "text": "<b>Risk Reasons:</b><br><pre>$REASON_TEXT</pre>"
                 }
               }
             ]
@@ -126,46 +206,67 @@ if [ -n "$GCHAT_WEBHOOK" ]; then
 }
 EOF
 
-  curl -s -X POST "$GCHAT_WEBHOOK" \
-    -H "Content-Type: application/json" \
-    -d @payload.json
+curl -s -X POST "$GCHAT_WEBHOOK" \
+  -H "Content-Type: application/json" \
+  -d @payload.json
 
 fi
 
-# --------------------------------------------------------
-# PR Comment
-# --------------------------------------------------------
+# ------------------------------------------------------------
+# PR COMMENT
+# ------------------------------------------------------------
 
-PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
 
-if [ "$PR_NUMBER" != "null" ] && [ -n "$PR_NUMBER" ]; then
-
-  echo "Posting PR comment to PR #$PR_NUMBER"
-
-  COMMENT_BODY=$(cat <<EOF
-### ⚠️ Code Deletion Detected
+COMMENT_BODY=$(cat <<EOF
+# 🚨 Automated PR Risk Analysis
 
 | Field | Value |
 |---|---|
-| Author | $AUTHOR |
-| Branch | $BRANCH_NAME |
-| Commit | \`$COMMIT_SHORT\` |
+| Severity | $SEVERITY |
+| Risk Score | $RISK_SCORE |
 | Deleted Lines | $DELETED_COUNT |
+| Added Lines | $ADDED_COUNT |
+| Author | $AUTHOR |
 
-#### Affected Files
+## Risk Reasons
+
+$REASON_TEXT
+
+## Files Changed
 
 \`\`\`
-$FILES_CHANGED
+$FILES_MARKDOWN
 \`\`\`
 
 [View Commit]($COMMIT_URL)
 
-> Please verify that these deletions are intentional.
+---
+
+### Reviewer Guidance
+
+| Severity | Action |
+|---|---|
+| MINOR | Standard review |
+| MAJOR | Careful validation required |
+| CRITICAL | Security/business review mandatory |
+
+> This is an automated DevSecOps governance check.
 EOF
 )
 
-  gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
+gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
+
+# ------------------------------------------------------------
+# FAIL PR IF REQUIRED
+# ------------------------------------------------------------
+
+if [ "$FAIL_PR" = true ]; then
+
+  echo "Failing PR due to $SEVERITY severity."
+
+  exit 1
 
 fi
 
-echo "Deletion scan completed."
+echo "Risk analysis completed successfully."
