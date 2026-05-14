@@ -61,6 +61,21 @@ FILES_CHANGED=$(git diff --name-only ${GITHUB_BASE_REF}...HEAD \
   || true
 )
 
+DELETED_LINE_INFO=$(git diff --unified=0 ${GITHUB_BASE_REF}...HEAD \
+  -- "${FILE_PATTERNS[@]}" \
+  | awk '
+    /^diff --git/ {
+        file=$4
+        sub("b/", "", file)
+    }
+    /^@@/ {
+        print file " -> " $0
+    }
+  ')
+
+FORMATTED_DELETIONS=$(echo "$DELETED_LINE_INFO" \
+  | sed 's/@@//g')
+
 # ------------------------------------------------------------
 # RISK ENGINE
 # ------------------------------------------------------------
@@ -248,9 +263,15 @@ COMMENT_BODY=$(cat <<EOF
 | Author | $AUTHOR |
 
 
-## Alert Reasons
+# ## Alert Reasons
 
-$REASON_TEXT
+# $REASON_TEXT
+
+## Deleted Line References
+
+\`\`\`
+$FORMATTED_DELETIONS
+\`\`\`
 
 ## Files Changed
 
