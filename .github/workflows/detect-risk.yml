@@ -29,5 +29,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GCHAT_WEBHOOK: ${{ secrets.GCHAT_WEBHOOK }}
         run: |
-          chmod +x .github/scripts/detect_deletions.sh
-          .github/scripts/detect_deletions.sh
+          chmod +x .github/scripts/detect_risk.sh
+          .github/scripts/detect_risk.sh
