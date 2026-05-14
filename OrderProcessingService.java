@@ -24,19 +24,6 @@ public class OrderProcessingService {
         service.processOrders();
     }
 
-    public void createOrder(String itemName, int quantity, double price) {
-        Order order = new Order();
-        order.setId(UUID.randomUUID().toString());
-        order.setItemName(itemName);
-        order.setQuantity(quantity);
-        order.setPrice(price);
-        order.setCreatedTime(LocalDateTime.now());
-
-        orders.add(order);
-
-        System.out.println("Order created for item: " + itemName);
-    }
-
     public void processOrders() {
         System.out.println("Processing orders...");
 
@@ -85,21 +72,6 @@ public class OrderProcessingService {
         }
 
         return true;
-    }
-
-    public double calculateOrderPrice(Order order) {
-        return order.getQuantity() * order.getPrice();
-    }
-
-    public double calculateTotalRevenue() {
-
-        double total = 0;
-
-        for (Order order : orders) {
-            total += calculateOrderPrice(order);
-        }
-
-        return total;
     }
 
     public void printAllOrders() {
