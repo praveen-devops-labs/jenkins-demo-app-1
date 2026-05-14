@@ -68,8 +68,10 @@ DELETED_LINE_INFO=$(git diff --unified=0 ${GITHUB_BASE_REF}...HEAD \
         file=$4
         sub("b/", "", file)
     }
+
     /^@@/ {
-        print file " -> " $0
+        match($0, /-([0-9]+)/, arr)
+        print "- " file " → around line " arr[1]
     }
   ')
 
@@ -142,9 +144,9 @@ fi
 # FORMAT FILE LIST
 # ------------------------------------------------------------
 
-FILES_MARKDOWN=$(echo "$FILES_CHANGED" | sed 's/^/- /')
+FILES_MARKDOWN=$(printf -- '- %s\n' $FILES_CHANGED)
 
-REASON_TEXT=$(printf '%s\n' "${REASONS[@]}" | sed 's/^/- /')
+REASON_TEXT=$(printf -- '- %s\n' "${REASONS[@]}")
 
 # # ------------------------------------------------------------
 # # GOOGLE CHAT ALERT
@@ -252,7 +254,7 @@ REASON_TEXT=$(printf '%s\n' "${REASONS[@]}" | sed 's/^/- /')
 PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
 
 COMMENT_BODY=$(cat <<EOF
-# $ALERT_ICON Automated PR Alert
+# 🚨 Automated PR Alert
 
 | Field | Value |
 |---|---|
@@ -262,27 +264,19 @@ COMMENT_BODY=$(cat <<EOF
 | Commit | [$COMMIT_SHORT]($COMMIT_URL) |
 | Author | $AUTHOR |
 
+## Alert Summary
 
-# ## Alert Reasons
-
-# $REASON_TEXT
+$REASON_TEXT
 
 ## Deleted Line References
 
-\`\`\`
-$FORMATTED_DELETIONS
-\`\`\`
+$DELETED_LINE_INFO
 
 ## Files Changed
 
-\`\`\`
 $FILES_MARKDOWN
-\`\`\`
-
-[View Commit]($COMMIT_URL)
 
 EOF
-
 )
 
 gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
