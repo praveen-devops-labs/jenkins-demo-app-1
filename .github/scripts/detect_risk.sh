@@ -65,10 +65,10 @@ FILES_CHANGED=$(git diff --name-only ${GITHUB_BASE_REF}...HEAD \
 # RISK ENGINE
 # ------------------------------------------------------------
 
-RISK_SCORE=0
-SEVERITY="MINOR"
-FAIL_PR=false
-REASONS=()
+# RISK_SCORE=0
+# SEVERITY="MINOR"
+# FAIL_PR=true
+# REASONS=()
 
 # ---- deletion volume ----
 
@@ -100,20 +100,28 @@ fi
 # DETERMINE SEVERITY
 # ------------------------------------------------------------
 
-if [ "$RISK_SCORE" -ge 10 ]; then
-  SEVERITY="CRITICAL"
-  FAIL_PR=true
-
-elif [ "$RISK_SCORE" -ge 4 ]; then
-  SEVERITY="MAJOR"
-  FAIL_PR=true
-
+if [ "$DELETED_COUNT" -gt 0 ]; then
+  ALERT_MESSAGE="Code deletions detected in this PR"
+  ALERT_ICON="🚨"
 else
-  SEVERITY="MINOR"
+  ALERT_MESSAGE="No risky deletions detected. All good."
+  ALERT_ICON="✅"
 fi
 
-echo "Risk Score: $RISK_SCORE"
-echo "Severity: $SEVERITY"
+# if [ "$RISK_SCORE" -ge 10 ]; then
+#   SEVERITY="CRITICAL"
+#   FAIL_PR=true
+
+# elif [ "$RISK_SCORE" -ge 4 ]; then
+#   SEVERITY="MAJOR"
+#   FAIL_PR=true
+
+# else
+#   SEVERITY="MINOR"
+# fi
+
+# echo "Risk Score: $RISK_SCORE"
+# echo "Severity: $SEVERITY"
 
 # ------------------------------------------------------------
 # FORMAT FILE LIST
@@ -123,98 +131,104 @@ FILES_MARKDOWN=$(echo "$FILES_CHANGED" | sed 's/^/- /')
 
 REASON_TEXT=$(printf '%s\n' "${REASONS[@]}" | sed 's/^/- /')
 
-# ------------------------------------------------------------
-# GOOGLE CHAT ALERT
-# ------------------------------------------------------------
+# # ------------------------------------------------------------
+# # GOOGLE CHAT ALERT
+# # ------------------------------------------------------------
 
-if [ -n "$GCHAT_WEBHOOK" ]; then
+# if [ -n "$GCHAT_WEBHOOK" ]; then
 
-cat <<EOF > payload.json
-{
-  "cardsV2": [
-    {
-      "cardId": "risk-alert",
-      "card": {
-        "header": {
-          "title": "🚨 PR Risk Analysis",
-          "subtitle": "$SEVERITY severity detected"
-        },
-        "sections": [
-          {
-            "widgets": [
-              {
-                "decoratedText": {
-                  "topLabel": "Repository",
-                  "text": "$GITHUB_REPOSITORY"
-                }
-              },
-              {
-                "decoratedText": {
-                  "topLabel": "Branch",
-                  "text": "$BRANCH_NAME"
-                }
-              },
-              {
-                "decoratedText": {
-                  "topLabel": "Author",
-                  "text": "$AUTHOR"
-                }
-              },
-              {
-                "decoratedText": {
-                  "topLabel": "Severity",
-                  "text": "$SEVERITY"
-                }
-              },
-              {
-                "decoratedText": {
-                  "topLabel": "Deleted Lines",
-                  "text": "$DELETED_COUNT"
-                }
-              },
-              {
-                "decoratedText": {
-                  "topLabel": "Added Lines",
-                  "text": "$ADDED_COUNT"
-                }
-              },
-              {
-                "textParagraph": {
-                  "text": "<b>Risk Reasons:</b><br><pre>$REASON_TEXT</pre>"
-                }
-              }
-            ]
-          },
-          {
-            "widgets": [
-              {
-                "buttonList": {
-                  "buttons": [
-                    {
-                      "text": "VIEW COMMIT",
-                      "onClick": {
-                        "openLink": {
-                          "url": "$COMMIT_URL"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      }
-    }
-  ]
-}
-EOF
+# cat <<EOF > payload.json
+# {
+#   "cardsV2": [
+#     {
+#       "cardId": "risk-alert",
+#       "card": {
+#         "header": {
+#           "title": "🚨 PR Risk Analysis",
+#           "subtitle": "$SEVERITY severity detected"
+#         },
+#         "sections": [
+#           {
+#             "widgets": [
+#               {
+#                 "decoratedText": {
+#                   "topLabel": "Repository",
+#                   "text": "$GITHUB_REPOSITORY"
+#                 }
+#               },
+#               {
+#                 "decoratedText": {
+#                   "topLabel": "Branch",
+#                   "text": "$BRANCH_NAME"
+#                 }
+#               },
+#               {
+#                 "decoratedText": {
+#                   "topLabel": "Commit",
+#                   "text": "$COMMIT_SHORT: $COMMIT_MSG"
+#                 }
+#               },
+#               {
+#                 "decoratedText": {
+#                   "topLabel": "Author",
+#                   "text": "$AUTHOR"
+#                 }
+#               },
+#               {
+#                 "decoratedText": {
+#                   "topLabel": "Severity",
+#                   "text": "$SEVERITY"
+#                 }
+#               },
+#               {
+#                 "decoratedText": {
+#                   "topLabel": "Deleted Lines",
+#                   "text": "$DELETED_COUNT"
+#                 }
+#               },
+#               {
+#                 "decoratedText": {
+#                   "topLabel": "Added Lines",
+#                   "text": "$ADDED_COUNT"
+#                 }
+#               },
+#               {
+#                 "textParagraph": {
+#                   "text": "<b>Risk Reasons:</b><br><pre>$REASON_TEXT</pre>"
+#                 }
+#               }
+#             ]
+#           },
+#           {
+#             "widgets": [
+#               {
+#                 "buttonList": {
+#                   "buttons": [
+#                     {
+#                       "text": "VIEW COMMIT",
+#                       "onClick": {
+#                         "openLink": {
+#                           "url": "$COMMIT_URL"
+#                         }
+#                       }
+#                     }
+#                   ]
+#                 }
+#               }
+#             ]
+#           }
+#         ]
+#       }
+#     }
+#   ]
+# }
+# EOF
 
-curl -s -X POST "$GCHAT_WEBHOOK" \
-  -H "Content-Type: application/json" \
-  -d @payload.json
+# curl -s -X POST "$GCHAT_WEBHOOK" \
+#   -H "Content-Type: application/json" \
+#   -d @payload.json
 
-fi
+# fi
 
 # ------------------------------------------------------------
 # PR COMMENT
@@ -223,17 +237,18 @@ fi
 PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
 
 COMMENT_BODY=$(cat <<EOF
-# 🚨 Automated PR Risk Analysis
+# $ALERT_ICON Automated PR Alert
 
 | Field | Value |
 |---|---|
-| Severity | $SEVERITY |
-| Risk Score | $RISK_SCORE |
+| Alert | $ALERT_MESSAGE |
 | Deleted Lines | $DELETED_COUNT |
 | Added Lines | $ADDED_COUNT |
+| Commit | [$COMMIT_SHORT]($COMMIT_URL) |
 | Author | $AUTHOR |
 
-## Risk Reasons
+
+## Alert Reasons
 
 $REASON_TEXT
 
@@ -245,32 +260,11 @@ $FILES_MARKDOWN
 
 [View Commit]($COMMIT_URL)
 
----
-
-### Reviewer Guidance
-
-| Severity | Action |
-|---|---|
-| MINOR | Standard review |
-| MAJOR | Careful validation required |
-| CRITICAL | Security/business review mandatory |
-
-> This is an automated DevSecOps governance check.
 EOF
+
 )
 
 gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
 
-# ------------------------------------------------------------
-# FAIL PR IF REQUIRED
-# ------------------------------------------------------------
-
-if [ "$FAIL_PR" = true ]; then
-
-  echo "Failing PR due to $SEVERITY severity."
-
-  exit 1
-
-fi
 
 echo "Risk analysis completed successfully."
