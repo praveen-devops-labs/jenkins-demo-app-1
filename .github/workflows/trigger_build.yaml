@@ -8,7 +8,7 @@ on:
         types:
             - closed
 jobs:
-    on-merge:
+    trigger-orchestrator-pipeline:
         if: github.event.pull_request.merged == true    
         runs-on: ubuntu-latest
         steps:
@@ -18,7 +18,9 @@ jobs:
                   JENKINS_USER: ${{ secrets.JENKINS_USER }}
                   JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
               run: |
-                  curl -X POST "${JENKINS_URL}/job/OrchestrationPipeline/build" \
-                  --user "${JENKINS_USER}:${JENKINS_TOKEN}" \
-                  -H "Content-Type: application/json" \
-                  -d '{"parameter": [{"name": "GIT_BRANCH", "value": "${{ github.head_ref }}"}]}'
+                  curl -X POST \
+                    "${JENKINS_URL}/works/Orchestrator-Pipeline/" \
+                    --user "${JENKINS_USER}:${JENKINS_TOKEN}" \
+                    --data-urlencode "REPO_NAME=${{ github.event.repository.name }}" \
+                    --data-urlencode "BRANCH_NAME=${{ github.event.pull_request.base.ref }}" \
+                    --data-urlencode "COMMIT_SHA=${{ github.sha }}"

@@ -61,8 +61,7 @@ FILES_CHANGED=$(git diff --name-only ${GITHUB_BASE_REF}...HEAD \
   || true
 )
 
-DELETED_LINE_INFO=$(git diff --unified=0 ${GITHUB_BASE_REF}...HEAD \
-  -- "${FILE_PATTERNS[@]}" \
+DELETED_LINE_INFO=$( \
   | awk '
     /^diff --git/ {
         file=$4
