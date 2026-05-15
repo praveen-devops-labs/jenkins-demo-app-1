@@ -1,0 +1,17 @@
+name: Detect Code Risk
+
+on:
+  pull_request:
+    branches:
+      - dev-login
+      - qa-testing
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  detect-risk:
+    uses: <ORG>/<REPO>/.github/workflows/detect-risk-reusable.yml@main
+
+    secrets: inherit
