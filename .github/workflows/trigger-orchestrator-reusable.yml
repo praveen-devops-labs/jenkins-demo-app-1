@@ -15,6 +15,7 @@ jobs:
                   JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
               run: |
 
-                curl -X POST \
-                  "${JENKINS_URL}/job/Orchestrator-Pipeline/build" \
-                  --user "${JENKINS_USER}:${JENKINS_TOKEN}"
+                curl -v -X POST \
+                  "${JENKINS_URL}/job/Orchestrator-Pipeline/build?token=${JENKINS_TOKEN}"
+
+                  
