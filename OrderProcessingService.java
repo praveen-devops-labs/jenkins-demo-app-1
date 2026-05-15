@@ -24,35 +24,6 @@ public class OrderProcessingService {
         service.processOrders();
     }
 
-    public void processOrders() {
-        System.out.println("Processing orders...");
-
-        for (Order order : orders) {
-
-            if (validateOrder(order)) {
-
-                double totalPrice = calculateOrderPrice(order);
-
-                System.out.println(
-                    "Processed Order: "
-                        + order.getItemName()
-                        + " | Quantity: "
-                        + order.getQuantity()
-                        + " | Total Price: "
-                        + totalPrice
-                );
-
-                generateInvoice(order);
-
-            } else {
-                System.out.println(
-                    "Invalid order found: "
-                        + order.getId()
-                );
-            }
-        }
-    }
-
     public boolean validateOrder(Order order) {
 
         if (order == null) {
