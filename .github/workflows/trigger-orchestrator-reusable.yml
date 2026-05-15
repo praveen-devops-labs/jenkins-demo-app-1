@@ -2,7 +2,7 @@ name: Trigger Jenkins Orchestration Pipeline
 
 on:
   workflow_call:
-    
+
 jobs:
     trigger-orchestrator-pipeline:
         if: github.event.pull_request.merged == true    
@@ -18,4 +18,4 @@ jobs:
                 curl -v -X POST \
                   "${JENKINS_URL}/job/Orchestrator-Pipeline/build?token=${JENKINS_TOKEN}"
 
-                  
+
