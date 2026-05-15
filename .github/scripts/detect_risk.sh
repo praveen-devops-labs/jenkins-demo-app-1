@@ -113,6 +113,7 @@ if echo "$FILES_CHANGED" | grep -E 'auth|security|payment|prod|infra'; then
   REASONS+=("Critical module modified")
 fi
 
+
 # ------------------------------------------------------------
 # DETERMINE SEVERITY
 # ------------------------------------------------------------

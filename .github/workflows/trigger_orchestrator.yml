@@ -1,12 +1,8 @@
 name: Trigger Jenkins Orchestration Pipeline
 
 on:
-    pull_request:
-        branches:
-            - dev-login
-            - qa-testing
-        types:
-            - closed
+  workflow_call:
+    
 jobs:
     trigger-orchestrator-pipeline:
         if: github.event.pull_request.merged == true    

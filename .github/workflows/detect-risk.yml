@@ -1,15 +1,8 @@
 name: Detect Code Risk
 
 on:
-  pull_request:
-    branches:
-      - dev-login
-      - qa-testing
-    types:
-      - opened
-      - synchronize
-      - reopened
-
+  workflow_call:
+    
 jobs:
   detect-risk:
     runs-on: ubuntu-latest
