@@ -12,6 +12,6 @@ on:
 
 jobs:
   detect-risk:
-    uses: praveen-devops-labs/jenkins-demo-app-1/github/workflows/detect-risk-reusable.yml@main
+    uses: praveen-devops-labs/jenkins-demo-app-1/.github/workflows/detect-risk-reusable.yml@main
 
     secrets: inherit
