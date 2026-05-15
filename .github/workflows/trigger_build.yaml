@@ -1,0 +1,24 @@
+name: Trigger Jenkins Orchestration Pipeline
+
+on:
+    pull_request:
+        branches:
+            - dev-login
+            - qa-testing
+        types:
+            - closed
+jobs:
+    on-merge:
+        if: github.event.pull_request.merged == true    
+        runs-on: ubuntu-latest
+        steps:
+            - name: Trigger Jenkins Orchestration Pipeline
+              env:
+                  JENKINS_URL: ${{ secrets.JENKINS_URL }}
+                  JENKINS_USER: ${{ secrets.JENKINS_USER }}
+                  JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+              run: |
+                  curl -X POST "${JENKINS_URL}/job/OrchestrationPipeline/build" \
+                  --user "${JENKINS_USER}:${JENKINS_TOKEN}" \
+                  -H "Content-Type: application/json" \
+                  -d '{"parameter": [{"name": "GIT_BRANCH", "value": "${{ github.head_ref }}"}]}'
