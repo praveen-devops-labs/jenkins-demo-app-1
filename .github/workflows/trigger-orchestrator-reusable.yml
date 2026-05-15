@@ -19,7 +19,7 @@ jobs:
                   "${JENKINS_URL}/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)")
 
                 curl -X POST \
-                  "${JENKINS_URL}/jobs/Orchestrator-Pipeline/buildWithParameters" \
+                  "${JENKINS_URL}/job/Orchestrator-Pipeline/build" \
                   --user "${JENKINS_USER}:${JENKINS_TOKEN}" \
                   -H "$CRUMB" \
                   --data-urlencode "REPO_NAME=${{ github.event.repository.name }}" \
