@@ -1,0 +1,98 @@
+name: Deployment Request
+
+on:
+  pull_request:
+    types:
+      - labeled
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+
+  request:
+
+    if: github.event.label.name == 'request:deploy'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Developer Repository
+        uses: actions/checkout@v4
+
+      - name: Read Deployment Labels
+
+        run: |
+
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+
+          echo "$LABELS"
+
+          if echo "$LABELS" | grep -q '"env:uat"'; then
+            echo "ENV=uat" >> $GITHUB_ENV
+          elif echo "$LABELS" | grep -q '"env:stag"'; then
+            echo "ENV=stag" >> $GITHUB_ENV
+          elif echo "$LABELS" | grep -q '"env:atp"'; then
+            echo "ENV=atp" >> $GITHUB_ENV
+          else
+            echo "No environment label found"
+            exit 1
+          fi
+
+          if echo "$LABELS" | grep -q '"action:build"'; then
+            echo "ACTIONS=build,deploy" >> $GITHUB_ENV
+          elif echo "$LABELS" | grep -q '"action:FC"'; then
+            echo "ACTIONS=FC" >> $GITHUB_ENV
+          else
+            echo "No action label found"
+            exit 1
+          fi
+
+          echo "APP=profit" >> $GITHUB_ENV
+
+      - name: Checkout env-control
+
+        uses: actions/checkout@v4
+
+        with:
+          repository: profit-apps-inc/jenkins-cicd-env-control
+          ref: cicd
+          path: env-control
+          token: ${{ secrets.OPS_TOKEN }}
+
+      - name: Install Python Packages
+
+        run: |
+
+          pip install pyyaml
+
+      - name: Update requests.yaml
+
+        run: |
+
+          python .github/scripts/request.py \
+            env-control/mappings/requests.yaml \
+            "${APP}" \
+            "${{ github.event.pull_request.head.repo.clone_url }}" \
+            "${{ github.event.pull_request.head.ref }}" \
+            "${ENV}" \
+            "${ACTIONS}" \
+            "${{ github.actor }}"
+
+      - name: Commit Request
+
+        run: |
+
+          cd env-control
+
+          git config user.name "opsuser-profit"
+          git config user.email "opsuser-profit@users.noreply.github.com"
+
+          git add mappings/requests.yaml
+
+          git commit -m \
+          "Deployment request from PR #${{ github.event.pull_request.number }}" || exit 0
+
+          git push origin cicd
