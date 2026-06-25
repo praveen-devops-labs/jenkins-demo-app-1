@@ -1,0 +1,21 @@
+name: Trigger Jenkins Orchestration Pipeline
+
+on:
+  pull_request:
+    branches:
+      - dev-login
+      - qa-testing
+    types:
+      - closed
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  trigger-orchestrator:
+    if: github.event.pull_request.merged == true
+
+    uses: praveen-devops-labs/jenkins-demo-app-1/.github/workflows/trigger-orchestrator-reusable.yml@main
+
+    secrets: inherit
