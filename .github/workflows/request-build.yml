@@ -17,11 +17,7 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    steps:
-
-      - name: Debug
-        run: |
-          echo "Triggered by: ${{ github.event.label.name }}"
+    steps:      
 
       - name: Checkout Developer Repository
         uses: actions/checkout@v4
