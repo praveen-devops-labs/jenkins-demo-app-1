@@ -26,6 +26,13 @@ jobs:
 
         run: |
 
+          TRIGGER_LABEL="${{ github.event.label.name }}"
+
+          if [[ "$TRIGGER_LABEL" != "request:deploy" ]]; then
+            echo "Ignoring label: $TRIGGER_LABEL"
+            exit 0
+          fi
+          
           LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
 
           echo "$LABELS"
