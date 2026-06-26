@@ -1,12 +1,1 @@
-Testing lables
-Testing github actions
-Testing lables-1
-Testing lables-2
-Testing lables-3
-Testing lables-4
-Testing lables-5
-Testing Lables-6
-Testing Lables-7
-Testing Lables-8
-Testing Lables-9
-Testing Lables-10
+Testing Lables-1
